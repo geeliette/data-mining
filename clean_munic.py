@@ -4,7 +4,7 @@ import os
 
 # === CONFIGURATION ===
 # Folder containing your Munic CSV files (the raw/originals)
-input_path = "./fuel_data"  # <-- adjust if needed
+input_path = "./fuel_data"
 output_path = os.path.join(os.path.dirname(input_path), "cleaned_munic_files")
 os.makedirs(output_path, exist_ok=True)
 
