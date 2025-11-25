@@ -11,11 +11,11 @@ from sklearn.metrics import r2_score, mean_absolute_error
 clean_dir = "../cleaned_munic_files"
 files = glob.glob(os.path.join(clean_dir, "*_cleaned.csv"))
 
-# Only test feasible sampling rates
+# More accurate naming
 SCENARIOS = {
-    "Baseline (5s)": 1,
-    "10s sampling": 2,
-    "20s sampling": 4,
+    "Baseline": 1,
+    "2× downsampling": 2,
+    "4× downsampling": 4,
 }
 
 def pick_time_column(df):
@@ -188,7 +188,7 @@ def evaluate_models(data):
 print("="*70)
 print("SAMPLING FREQUENCY SENSITIVITY ANALYSIS")
 print("="*70)
-print("Testing 3 sampling frequencies: 5s, 10s, 20s\n")
+print("Testing 3 data collection rates: 100%, 50%, 25%\n")
 
 all_results = []
 baseline_r2 = None
@@ -196,7 +196,6 @@ baseline_r2 = None
 for name, factor in SCENARIOS.items():
     print(f"{name} (factor={factor})...")
     data = extract_features_downsampled(factor)
-    print(f"  Trips extracted: {len(data)}")
     
     if len(data) < 50:
         print(f"  ⚠️  Insufficient data, skipping\n")
@@ -206,8 +205,8 @@ for name, factor in SCENARIOS.items():
     if scores:
         result = {
             'Scenario': name,
-            'Interval_s': 5 * factor,
-            'Bandwidth_%': round(100/factor, 1),
+            'Downsampling_Factor': factor,
+            'Data_Collection_%': round(100/factor, 1),
             'Trips': len(data),
         }
         result.update(scores)
@@ -238,8 +237,9 @@ if baseline_r2:
     df['Degradation'] = baseline_r2 - df['Best_R2']
     df['Degradation_%'] = (df['Degradation'] / baseline_r2 * 100).round(1)
 
-print("\nPerformance vs Bandwidth Trade-off:\n")
-display_cols = ['Scenario', 'Interval_s', 'Bandwidth_%', 'Trips', 'Best_R2', 'Degradation_%']
+# Display columns
+print("\nPerformance vs Data Collection Rate:\n")
+display_cols = ['Scenario', 'Data_Collection_%', 'Trips', 'Best_R2', 'Degradation_%']
 print(df[display_cols].to_string(index=False))
 
 print("\n" + "="*70)
@@ -254,19 +254,21 @@ print("KEY FINDINGS")
 print("="*70)
 
 for _, row in df.iterrows():
-    if row['Interval_s'] == 5:
+    if row['Downsampling_Factor'] == 1:
         continue
     
     print(f"\n{row['Scenario']}:")
-    print(f"  Bandwidth reduction: {100 - row['Bandwidth_%']:.0f}%")
+    # UPDATED: More accurate description
+    print(f"  Data reduction: {100 - row['Data_Collection_%']:.0f}%")
+    print(f"  Bandwidth savings: {100 - row['Data_Collection_%']:.0f}%")
     print(f"  Best R²: {row['Best_R2']:.4f}")
     print(f"  Performance loss: {row['Degradation_%']:.1f}%")
     
     if row['Degradation_%'] < 10:
-        recommendation = "RECOMMENDED: Excellent trade-off"
+        recommendation = "RECOMMENDED - Excellent trade-off"
     elif row['Degradation_%'] < 20:
-        recommendation = "ACCEPTABLE: Moderate degradation"
+        recommendation = "ACCEPTABLE - Moderate degradation"
     else:
-        recommendation = "NOT RECOMMENDED: High degradation"
+        recommendation = "NOT RECOMMENDED - High degradation"
     
     print(f"  Assessment: {recommendation}")
